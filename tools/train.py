@@ -261,7 +261,7 @@ def main():
     model.CLASSES = datasets[0].CLASSES
     
     if 'load_img_from' in cfg:
-        print(cfg.load_img_from)
+        logger.info(f'load_img_from: {cfg.load_img_from}')
         checkpoint= torch.load(cfg.load_img_from, map_location='cpu')
         if 'state_dict' in checkpoint:
             state_dict = checkpoint['state_dict']
@@ -286,7 +286,7 @@ def main():
         model.load_state_dict(new_ckpt, strict=False)
     
     if 'load_lift_from' in cfg:
-        print(cfg.load_lift_from)
+        logger.info(f'load_lift_from: {cfg.load_lift_from}')
         checkpoint= torch.load(cfg.load_lift_from, map_location='cpu')
         if 'state_dict' in checkpoint:
             state_dict = checkpoint['state_dict']
