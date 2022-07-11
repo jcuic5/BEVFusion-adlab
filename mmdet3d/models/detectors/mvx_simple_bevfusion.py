@@ -66,7 +66,7 @@ class MVXSimpleBEVFusion(MVXFasterRCNN):
         self.lift = camera_stream
         self.se = se
         if camera_stream:
-            self.lift_splat_shot_vis = LiftSplatShoot(grid=grid, inputC=imc, camC=64, 
+            self.lift_splat_shot_vis = LiftSplatShoot(lss=lss, grid=grid, inputC=imc, camC=64, 
             pc_range=pc_range, final_dim=final_dim, downsample=downsample)
         if lc_fusion:
             if se:
@@ -81,21 +81,21 @@ class MVXSimpleBEVFusion(MVXFasterRCNN):
                 act_cfg=dict(type='ReLU'),
                 inplace=False)
             
-        self.freeze_img = kwargs.get('freeze_img', False)
-        self.init_weights(pretrained=kwargs.get('pretrained', None))
-        self.freeze()
+        # self.freeze_img = kwargs.get('freeze_img', False)
+        # self.init_weights(pretrained=kwargs.get('pretrained', None))
+        # self.freeze()
 
-    def freeze(self):
-        if self.freeze_img:
-            if self.with_img_backbone:
-                for param in self.img_backbone.parameters():
-                    param.requires_grad = False
-            if self.with_img_neck:
-                for param in self.img_neck.parameters():
-                    param.requires_grad = False
-            if self.lift:
-                for param in self.lift_splat_shot_vis.parameters():
-                    param.requires_grad = False
+    # def freeze(self):
+    #     if self.freeze_img:
+    #         if self.with_img_backbone:
+    #             for param in self.img_backbone.parameters():
+    #                 param.requires_grad = False
+    #         if self.with_img_neck:
+    #             for param in self.img_neck.parameters():
+    #                 param.requires_grad = False
+    #         if self.lift:
+    #             for param in self.lift_splat_shot_vis.parameters():
+    #                 param.requires_grad = False
 
     def extract_pts_feat(self, pts, img_feats, img_metas):
         """Extract features of points."""

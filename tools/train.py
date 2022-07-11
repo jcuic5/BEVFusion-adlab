@@ -190,25 +190,24 @@ def main():
     # if distributed and sync_bn:
     #     model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
     #     print('Convert to SyncBatchNorm')
-
+    param_grad = []
+    param_nograd = []
     if 'freeze_lidar_components' in cfg and cfg['freeze_lidar_components'] is True:
-        logger.info(f"param need to update:")
-        param_grad = []
-        param_nograd = []
-
+        logger.info(f"freeze lidar components")
         for name, param in model.named_parameters():
             if 'pts' in name and 'pts_bbox_head' not in name:
                 param.requires_grad = False
-            if 'pts_bbox_head.decoder.0' in name:
-                param.requires_grad = False
-            if 'pts_bbox_head.shared_conv' in name and 'pts_bbox_head.shared_conv_img' not in name:
-                param.requires_grad = False
-            if 'pts_bbox_head.heatmap_head' in name and 'pts_bbox_head.heatmap_head_img' not in name:
-                param.requires_grad = False
-            if 'pts_bbox_head.prediction_heads.0' in name:
-                param.requires_grad = False
-            if 'pts_bbox_head.class_encoding' in name:
-                param.requires_grad = False
+            if 'no_freeze_head' not in cfg:
+                if 'pts_bbox_head.decoder.0' in name:
+                    param.requires_grad = False
+                if 'pts_bbox_head.shared_conv' in name and 'pts_bbox_head.shared_conv_img' not in name:
+                    param.requires_grad = False
+                if 'pts_bbox_head.heatmap_head' in name and 'pts_bbox_head.heatmap_head_img' not in name:
+                    param.requires_grad = False
+                if 'pts_bbox_head.prediction_heads.0' in name:
+                    param.requires_grad = False
+                if 'pts_bbox_head.class_encoding' in name:
+                    param.requires_grad = False
 
         from torch import nn
 
@@ -221,7 +220,7 @@ def main():
         model.pts_middle_encoder.apply(fix_bn)
         model.pts_backbone.apply(fix_bn)
         model.pts_neck.apply(fix_bn)
-        print('freeze lidar backbone')
+        # print('freeze lidar backbone')
         if 'TransFusion' in cfg.model.type and ('no_freeze_head' not in cfg):
             print('freez head')
             model.pts_bbox_head.heatmap_head.apply(fix_bn)
@@ -231,10 +230,15 @@ def main():
             model.pts_bbox_head.prediction_heads[0].apply(fix_bn)
         for name, param in model.named_parameters():
             if param.requires_grad is True:
-                logger.info(name)
                 param_grad.append(name)
             else:
                 param_nograd.append(name)
+    logger.info(f'param_grad:')
+    for name in param_grad:
+        logger.info(f'{name}')
+    logger.info(f'param_nograd:')
+    for name in param_nograd:
+        logger.info(f'{name}')
 
     logger.info(f'Model:\n{model}')
     datasets = [build_dataset(cfg.data.train)]

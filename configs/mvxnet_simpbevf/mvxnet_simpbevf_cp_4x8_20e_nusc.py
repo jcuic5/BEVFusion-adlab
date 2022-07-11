@@ -21,6 +21,7 @@ model = dict(
     se=False,
     camera_stream=True, 
     lc_fusion=True,
+    freeze_img=False,
     grid=0.6, 
     num_views=6,
     final_dim=final_dim,
@@ -34,7 +35,7 @@ model = dict(
         num_stages=4,
         out_indices=(0, 1, 2, 3),
         frozen_stages=1,
-        norm_cfg=dict(type='BN', requires_grad=False),
+        norm_cfg=dict(type='BN', requires_grad=True),
         norm_eval=True,
         style='pytorch'),
     img_neck=dict(
@@ -65,20 +66,22 @@ model = dict(
             point_cloud_range=point_cloud_range)),
     test_cfg=dict(
         pts=dict(voxel_size=voxel_size[:2], pc_range=point_cloud_range[:2], nms_type='circle')))
-freeze_lidar_components = False
-find_unused_parameters = False
+freeze_lidar_components = True
+find_unused_parameters = True
 no_freeze_head = True
 
 data = dict(
-    samples_per_gpu=2,
-    workers_per_gpu=6,)
+    samples_per_gpu=4,
+    workers_per_gpu=16,)
 
 optimizer = dict(lr=5e-5)
 evaluation = dict(interval=5)
 total_epochs = 20
 # load_lift_from = 'work_dirs/bevf_cp_4x8_20e_nusc_cam/epoch_20.pth'
 # https://download.openmmlab.com/mmdetection3d/v0.1.0_models/nuimages_semseg/mask_rcnn_r50_fpn_coco-2x_1x_nuim/mask_rcnn_r50_fpn_coco-2x_1x_nuim_20201008_195238-b1742a60.pth
-load_img_from = 'checkpoints/mask_rcnn_r50_fpn_coco-2x_1x_nuim_20201008_195238-b1742a60.pth'
+# load_img_from = 'checkpoints/mask_rcnn_r50_fpn_coco-2x_1x_nuim_20201008_195238-b1742a60.pth'
 # https://download.openmmlab.com/mmdetection3d/v1.0.0_models/centerpoint/centerpoint_0075voxel_second_secfpn_dcn_circlenms_4x8_cyclic_20e_nus/centerpoint_0075voxel_second_secfpn_dcn_circlenms_4x8_cyclic_20e_nus_20210827_161135-1782af3e.pth
-load_from = 'checkpoints/centerpoint_0075voxel_second_secfpn_dcn_circlenms_4x8_cyclic_20e_nus_20210827_161135-1782af3e.pth'
-# gpu_ids = range(0, 2)
+# load_from = 'checkpoints/centerpoint_0075voxel_second_secfpn_dcn_circlenms_4x8_cyclic_20e_nus_20210827_161135-1782af3e.pth'
+load_from = 'checkpoints/mask_rcnn_r50_fpn_plus_centerpoint_wo_head.pth'
+
+gpu_ids = range(0, 2)
