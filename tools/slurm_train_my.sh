@@ -20,5 +20,5 @@ srun --partition=general \
     ${SRUN_ARGS} \
     python -u tools/train.py ${CONFIG} --work-dir=${WORK_DIR} --launcher="slurm" ${PY_ARGS}
 
-#./tools/slurm_train_my.sh configs/_my_configs_/dv_mvx-fpn_second_secfpn_adamw_8x2_80e_kitti-3d-3class.py work_dirs/Wed-Jul06-2242
+#./tools/slurm_train_my.sh configs/*** work_dirs/***
 # sinteractive --nodelist=influ1 --gpus-per-node=2

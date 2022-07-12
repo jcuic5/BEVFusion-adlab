@@ -147,14 +147,7 @@ class CamEncode(nn.Module):
 
 
 class LiftSplatShoot(nn.Module):
-    def __init__(self, 
-                 final_dim=(900, 1600), 
-                 camera_depth_range=[4.0, 45.0, 1.0], 
-                 pc_range=[-50, -50, -5, 50, 50, 3], 
-                 downsample=4, 
-                 grid=3, 
-                 inputC=256, 
-                 camC=64):
+    def __init__(self, lss=False, final_dim=(900, 1600), camera_depth_range=[4.0, 45.0, 1.0], pc_range=[-50, -50, -5, 50, 50, 3], downsample=4, grid=3, inputC=256, camC=64):
         """
         Args:
             lss (bool): using default downsampled r18 BEV encoder in LSS.
@@ -194,7 +187,30 @@ class LiftSplatShoot(nn.Module):
         
         # toggle using QuickCumsum vs. autograd
         self.use_quickcumsum = True
-        self.bevencode = BevEncode(inC=camC, outC=inputC)
+        z = self.grid_conf['zbound']
+        cz = int(self.camC * ((z[1] - z[0]) // z[2]))
+        self.lss = lss
+        self.bevencode = nn.Sequential(
+            nn.Conv2d(cz, cz, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(cz),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(cz, 512, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, 512, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(512),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(512, inputC, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(inputC),
+            nn.ReLU(inplace=True)
+        )
+        if self.lss:
+          self.bevencode = nn.Sequential(
+            nn.Conv2d(cz, camC, kernel_size=1, padding=0, bias=False),
+            nn.BatchNorm2d(camC),
+            BevEncode(inC=camC, outC=inputC)
+
+        )
 
     def create_frustum(self):
         # make grid in image plane
@@ -290,6 +306,6 @@ class LiftSplatShoot(nn.Module):
     
     def forward(self, x, rots, trans, lidar2img_rt=None, bboxs=None, post_rots=None, post_trans=None, aug_bboxs=None, img_metas=None):
         x, depth = self.get_voxels(x, rots, trans, post_rots, post_trans) # [B, C, H, W, L]
-        x = self.bevencode(bev)
+        x = self.bevencode(x)
         return x, depth
 

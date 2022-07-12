@@ -226,7 +226,7 @@ class LiftSplatShoot(nn.Module):
         frustum = torch.stack((xs, ys, ds), -1)
         return nn.Parameter(frustum, requires_grad=False)
 
-    def get_geometry(self, rots, trans, post_rots=None, post_trans=None):
+    def get_geometry(self, rots, trans, post_rots=None, post_trans=None, img_meta=None):
         """Determine the (x,y,z) locations (in the ego frame)
         of the points in the point cloud.
         Returns B x N x D x H/downsample x W/downsample x 3
@@ -241,6 +241,12 @@ class LiftSplatShoot(nn.Module):
                             ), 5)
         points = rots.view(B, N, 1, 1, 1, 3, 3).matmul(points).squeeze(-1)
         points += trans.view(B, N, 1, 1, 1, 3)
+
+        # undo lidar aug
+        if img_meta is not None:
+            B, N, D, H, W, _ = points.shape
+            points = apply_3d_transformation(points.view(-1, 3), 'LIDAR', img_meta, reverse=False)
+            points = points.view(B, N, D, H, W, 3)
 
         return points
 
@@ -293,24 +299,20 @@ class LiftSplatShoot(nn.Module):
         # griddify (B x C x Z x X x Y)
         final = torch.zeros((B, C, self.nx[2], self.nx[0], self.nx[1]), device=x.device)
         final[geom_feats[:, 3], :, geom_feats[:, 2], geom_feats[:, 0], geom_feats[:, 1]] = x
-        
+
+        # collapse Z
+        final = torch.cat(final.unbind(dim=2), 1).permute((0,1,3,2))
+
         return final
 
-    def get_voxels(self, x, rots=None, trans=None, post_rots=None, post_trans=None):
-        geom = self.get_geometry(rots, trans, post_rots, post_trans)
+    def get_voxels(self, x, rots=None, trans=None, post_rots=None, post_trans=None, img_meta=None):
+        geom = self.get_geometry(rots, trans, post_rots, post_trans, img_meta)
         x, depth = self.get_cam_feats(x)
         x = self.voxel_pooling(geom, x)
         return x, depth
-    
-    def s2c(self, x):
-        B, C, H, W, L = x.shape
-        bev = torch.reshape(x, (B, C*H, W, L))
-        bev = bev.permute((0,1,3,2))
-        return bev
 
     def forward(self, x, rots, trans, lidar2img_rt=None, bboxs=None, post_rots=None, post_trans=None, aug_bboxs=None, img_metas=None):
-        x, depth = self.get_voxels(x, rots, trans, post_rots, post_trans) # [B, C, H, W, L]
-        bev = self.s2c(x)
-        x = self.bevencode(bev)
+        x, depth = self.get_voxels(x, rots, trans, post_rots, post_trans, img_metas) # [B, C, H, W, L]
+        x = self.bevencode(x)
         return x, depth
 
